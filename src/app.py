@@ -12,22 +12,22 @@ def func():
 def hola():
     return "<h1> Hola PWA - IEVN103 </h1>"
 
-#parametros por url
+# parametros por url
 @app.route("/user/<string:nom>")
-def user(nom):
+def user_nombre(nom):
     return "<h1> Hola user: {} </h1>".format(nom)
 
 @app.route("/user/<int:n>")
-def user(n):
+def user_numero(n):
     return "<h1> Numero: {} </h1>".format(n)
 
 @app.route("/user/<int:id>/<string:username>")
-def username(id, username):
+def user_completo(id, username):
     return "<h1> ID: {} Nombre: {} </h1>".format(id,username)
 
 @app.route("/suma/<float:n1>/<float:n2>")
-def func(n1, n2):
+def func_suma(n1, n2):
     return "la suma es: {}".format(n1+n2)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
