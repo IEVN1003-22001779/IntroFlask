@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../static/bootstrap/css/bootstrap.min.css">
     <title>Document</title>
 </head>
 <body>
@@ -14,7 +15,14 @@
         <h1>{{titulo}}</h1>
 
         {%for nom in listado %}
-            <li>{{nom}}</li>
+            {% block conttainer %}
+
+            <h1>Materia PWA</h1>
+            <h2>IEVN1003</h2>
+
+            <h1>{{titulo}}</h1>
+            {%for nom in listado%}
+                <li>{{nom}}</li>
         {%endfor%}
         </div>
     </div>

@@ -1,33 +1,62 @@
-from flask import Flask, render_template
+from flask import Flask, jsonify
+from flask_cors import CORS
+import pymysql
 
-app=Flask(__name__)
+from config import config
 
-@app.route("/")
-def func():
-    titulo="Hola PWA - IEVN103"
-    listado=['Python', 'Flask', 'Jinja2', 'HTML', 'CSS']
-    return render_template("index.html",titulo=titulo,listado=listado)
+pymysql.install_as_MySQLdb()
 
-@app.route("/hola")
-def hola():
-    return "<h1> Hola PWA - IEVN103 </h1>"
+from flask_mysqldb import MySQL
 
-# parametros por url
-@app.route("/user/<string:nom>")
-def user_nombre(nom):
-    return "<h1> Hola user: {} </h1>".format(nom)
+app = Flask(__name__)
+app.config.from_object(config["development"])
+CORS(app)
+con = MySQL(app)
 
-@app.route("/user/<int:n>")
-def user_numero(n):
-    return "<h1> Numero: {} </h1>".format(n)
+@app.route("/alumnos", methods=["GET"])
+def lista_alumnos():
+    alumnos = []
+    cursor = None
 
-@app.route("/user/<int:id>/<string:username>")
-def user_completo(id, username):
-    return "<h1> ID: {} Nombre: {} </h1>".format(id,username)
+    try:
+        cursor = con.connection.cursor()
+        cursor.execute("SELECT * FROM alumnos")
+        alumnos = [
+            {
+                "matricula": fila[0],
+                "nombre": fila[1],
+                "apaterno": fila[2],
+                "amaterno": fila[3],
+                "correo": fila[4],
+            }
+            for fila in cursor.fetchall()
+        ]
+    except Exception:
+        app.logger.exception("Error al consultar la lista de alumnos")
+        return jsonify(
+            {
+                "alumnos": [],
+                "mensaje": "Error al obtener la lista de alumnos",
+                "exito": False,
+            }
+        ), 500
+    finally:
+        if cursor is not None:
+            cursor.close()
 
-@app.route("/suma/<float:n1>/<float:n2>")
-def func_suma(n1, n2):
-    return "la suma es: {}".format(n1+n2)
+    return jsonify(
+        {
+            "alumnos": alumnos,
+            "mensaje": "Lista de alumnos",
+            "exito": True,
+        }
+    )
 
-if __name__ == '__main__':
-    app.run(debug=True)
+
+@app.errorhandler(404)
+def pagina_no_encontrada(error):
+    return "<h1>Página no encontrada</h1>", 404
+
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
