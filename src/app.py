@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 import pymysql
 
@@ -52,6 +52,95 @@ def lista_alumnos():
         }
     )
 
+def fila_a_diccionario(cursor, fila):
+    columnas = [columna[0] for columna in cursor.description]
+    return dict(zip(columnas, fila))
+
+@app.route("/alumnos/<string:matricula>", methods=["GET"])
+def leer_alumnos_bd(matricula):
+    cursor = None
+    try:
+        cursor = con.connection.cursor()
+        cursor.execute("select * FROM alumnos WHERE matricula = %s", (matricula,))
+        fila = cursor.fetchone()
+        if fila is None:
+            return jsonify({
+                'mensaje': 'Alumnos no encontrados',
+                'exito': False
+            }), 404
+        alumno = fila_a_diccionario(cursor, fila)
+        return jsonify({
+            'alumno': alumno,
+            'exito': True
+        }), 200
+    except Exception as ex:
+        return jsonify({
+            'mensaje': 'Error al consultar el alumno',
+            'exito': False
+        }), 500
+    finally:
+        if cursor is not None:
+            cursor.close()
+    
+@app.route("/alumnos", methods=['POST'])
+def registrar_alumno():
+    datos = request.get_json(silent=True)
+    if not isinstance(datos, dict):
+        return jsonify({
+            'mensaje': 'Se requiere un objeto JSON',
+            'exito': False
+        }), 400
+
+    campos = ['matricula', 'nombre', 'apaterno', 'amaterno', 'correo']
+    if any(
+        campo not in datos
+        or not isinstance(datos[campo], str)
+        or not datos[campo].strip()
+        for campo in campos
+    ):
+        return jsonify({
+            'mensaje': 'Faltan campos obligatorios',
+            'exito': False
+        }), 400
+
+    cursor = None
+    try:
+        cursor = con.connection.cursor()
+        matricula = datos['matricula'].strip()
+        cursor.execute(
+            "SELECT matricula FROM alumnos WHERE matricula=%s",
+            (matricula,)
+        )
+        if cursor.fetchone() is not None:
+            return jsonify({
+                'mensaje': 'La matricula ya existe',
+                'exito': False
+            }), 409
+
+        valores = tuple(datos[campo].strip() for campo in campos)
+        cursor.execute(
+            """INSERT INTO alumnos
+            (matricula, nombre, apaterno, amaterno, correo)
+            VALUES (%s, %s, %s, %s, %s)""",
+            valores,
+        )
+        con.connection.commit()
+
+        return jsonify({
+            'mensaje': 'Alumno registrado correctamente',
+            'exito': True
+        }), 201
+
+    except Exception:
+        con.connection.rollback()
+        return jsonify({
+            'mensaje': 'Error al registrar el alumno',
+            'exito': False
+        }), 500
+
+    finally:
+        if cursor is not None:
+            cursor.close()
 
 @app.errorhandler(404)
 def pagina_no_encontrada(error):
